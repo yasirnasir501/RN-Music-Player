@@ -6,9 +6,10 @@ const {height, width} = Dimensions.get('window');
 const MusicListItem = ({item, index, data}) => {
   const navigation = useNavigation();
   return (
-    <TouchableOpacity style={[styles.container, {marginBottom: index == data.length - 1 ? 30 : 0}]} onPress={()=>{
+    <TouchableOpacity style={[styles.container, {marginBottom: index == data.length - 1 ? 30 : 0},]} onPress={()=>{
       navigation.navigate('Music', {
         data: item,
+        index: index,
       })
     }}>
       <Image source={item.image} style={styles.songImage}/>
