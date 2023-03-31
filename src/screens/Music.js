@@ -3,10 +3,15 @@ import React, { useRef, useState, useEffect } from 'react'
 import { useRoute } from '@react-navigation/native'
 import { songs } from '../MusicData';
 import Slider from '@react-native-community/slider';
+import TrackPlayer, {capabilities, usePlaybackState, useProgress, State} from 'react-native-track-player'
+
 
 const { height, width } = Dimensions.get('window');
+
 const Music = () => {
-  const [currentSong, setCurrentSong] = useState(0);
+  const route = useRoute();
+  const playbackState = usePlaybackState();
+  const [currentSong, setCurrentSong] = useState(route.params.index);
   const ref = useRef();
   useEffect(() => {
     setTimeout(() => {
@@ -15,8 +20,47 @@ const Music = () => {
         index: currentSong,
       })
     }, 100)
-  })
-  const route = useRoute();
+  }, []);
+
+  useEffect(()=> {
+    setupPlayer();
+  }, [])
+
+  const setupPlayer = async () => {
+    try{
+      await TrackPlayer.setupPlayer()
+      await TrackPlayer.updateOptions({
+        // Media controls capabilities
+        capabilities: [
+            Capability.Play,
+            Capability.Pause,
+            Capability.SkipToNext,
+            Capability.SkipToPrevious,
+            Capability.Stop,
+        ],
+    
+        // Capabilities that will show up when the notification is in the compact form on Android
+        compactCapabilities: [Capability.Play, Capability.Pause],
+    
+        // Icons for the notification on Android (if you don't like the default ones)
+        
+    });
+    await TrackPlayer.add(songs);
+    togglePlayback(playbackState);
+    }
+    catch(e) {}
+  };
+
+  const togglePlayback = async playbackState => {
+    console.log(playbackState);
+    if ( 
+      playbackState === State.Paused || playbackState === State.Ready){
+      await TrackPlayer.play();
+    } else {
+      await TrackPlayer.pause();
+    }
+  };
+
   return (
     <View style={styles.container}>
 
@@ -26,43 +70,55 @@ const Music = () => {
           ref={ref}
           showsHorizontalScrollIndicator={false}
           pagingEnabled
-          data={songs} renderItem={({ item, index }) => {
+          data={songs}
+          renderItem={({ item, index }) => {
             return (
               <View style={styles.bannerView}>
                 <Image source={item.image} style={styles.banner} />
+                <Text style={styles.name}>{route.params.data.title}</Text>
+                <Text style={styles.name}>{route.params.data.singer}</Text>
               </View>
-            )
-          }} />
+            );
+          }}
+        />
       </View>
 
-      <Text style={styles.name}>{route.params.data.title}</Text>
-      <Text style={styles.name}>{route.params.data.singer}</Text>
+
       <View style={styles.sliderView}>
         <Slider />
       </View>
 
       <View style={styles.btnArea}>
-        <TouchableOpacity onPress={() => {
+        <TouchableOpacity onPress={async() => {
           if (currentSong > 0) {
             setCurrentSong(currentSong - 1);
             ref.current.scrollToIndex({
               animated: true,
-              index: currentSong - 1,
-            })
+              index: parseInt(currentSong) - 1,
+            });
+            await TrackPlayer.skip(parseInt(currentSong) - 1);
+            togglePlayback(playbackState);
           }
         }}>
           <Image source={require("../images/backward.png")} style={styles.icon} />
         </TouchableOpacity>
-        <TouchableOpacity>
-          <Image source={require("../images/play.png")} style={[styles.icon, { width: 50, height: 50 }]} />
+
+        <TouchableOpacity onPress={async () => {
+          // await TrackPlayer.skip(1)
+          togglePlayback(playbackState);
+        }}>
+          <Image source={playbackState == State.Paused || playbackState == State.Ready ? require("../images/play.png") : require("../images/pause.png")} style={[styles.icon, { width: 50, height: 50 }]} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => {
+
+        <TouchableOpacity onPress={async () => {
           if (songs.length - 1 > currentSong) {
             setCurrentSong(currentSong + 1);
             ref.current.scrollToIndex({
               animated: true,
-              index: currentSong + 1,
+              index: parseInt(currentSong) + 1,
             })
+            await TrackPlayer.skip(parseInt(currentSong) + 1);
+            togglePlayback(playbackState);
           }
         }}>
           <Image source={require("../images/forward.png")} style={styles.icon} />
@@ -132,4 +188,4 @@ const styles = StyleSheet.create({
     width: 35,
     height: 35,
   }
-})
+});
